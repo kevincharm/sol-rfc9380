@@ -29,7 +29,7 @@ contract SSWU {
     error InvalidFieldElement(uint256 x);
     error MapToPointFailed(uint256 noSqrt);
 
-    /// @notice Fouque-Tibouchi specialised SW mapping for BN curves
+    /// @notice Map field element to E using SSWU
     /// @param u Field element to map
     /// @return p Point on curve
     function mapToPoint(uint256 u) public view returns (uint256[2] memory p) {
