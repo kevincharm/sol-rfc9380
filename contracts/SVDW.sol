@@ -77,35 +77,6 @@ contract SVDW {
         return addmod(mulmod(mulmod(x, x, N), x, N), B, N);
     }
 
-    /// @notice TODO: Replace with addition chain
-    function modexp(
-        bytes memory base,
-        bytes memory exponent,
-        bytes memory modulus
-    ) private view returns (bool success, bytes memory output) {
-        bytes memory input = abi.encodePacked(
-            uint256(base.length),
-            uint256(exponent.length),
-            uint256(modulus.length),
-            base,
-            exponent,
-            modulus
-        );
-
-        output = new bytes(modulus.length);
-
-        assembly {
-            success := staticcall(
-                gas(),
-                5,
-                add(input, 32),
-                mload(input),
-                add(output, 32),
-                mload(modulus)
-            )
-        }
-    }
-
     function cmov(uint256 x, uint256 y, bool b) private pure returns (uint256) {
         if (b) {
             return y;
@@ -121,11 +92,7 @@ contract SVDW {
     /// @param u Field element
     /// @return 1 if u is a quadratic residue, -1 if not, or 0 if u = 0 (mod p)
     function legendre(uint256 u) private view returns (int8) {
-        (bool success, bytes memory _x) = modexp(
-            abi.encodePacked(u),
-            abi.encodePacked((N - 1) / 2),
-            abi.encodePacked(N)
-        );
+        (bool success, bytes memory _x) = modexpLegendre(u);
         if (!success) revert MapToPointFailed(u);
         uint256 x = uint256(bytes32(_x));
         if (x == N - 1) {
@@ -137,18 +104,48 @@ contract SVDW {
         return int8(int256(x));
     }
 
+    /// @notice This is cheaper than an addchain for exponent (N-1)/2
+    function modexpLegendre(
+        uint256 u
+    ) private view returns (bool success, bytes memory output) {
+        output = new bytes(32);
+        bytes memory input = new bytes(192);
+        assembly {
+            let p := add(input, 32)
+            mstore(p, 32) // len(u)
+            p := add(p, 32)
+            mstore(p, 32) // len(exp)
+            p := add(p, 32)
+            mstore(p, 32) // len(mod)
+            p := add(p, 32)
+            mstore(p, u) // u
+            p := add(p, 32)
+            mstore(
+                p,
+                0x183227397098d014dc2822db40c0ac2ecbc0b548b438e5469e10460b6c3e7ea3
+            ) // (N-1)/2
+            p := add(p, 32)
+            mstore(
+                p,
+                0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
+            ) // N
+
+            success := staticcall(
+                gas(),
+                5,
+                add(input, 32),
+                192,
+                add(output, 32),
+                32
+            )
+        }
+    }
+
     /// @notice sqrt(xx) mod N
     /// @param xx Input
     function sqrt(uint256 xx) internal pure returns (uint256 x, bool hasRoot) {
         x = ModexpSqrt.run(xx);
         hasRoot = mulmod(x, x, N) == xx;
-    }
-
-    function sqrtOrBust(uint256 xx) internal pure returns (uint256) {
-        uint256 x = ModexpSqrt.run(xx);
-        bool hasRoot = mulmod(x, x, N) == xx;
-        require(hasRoot, "no root");
-        return x;
     }
 
     /// @notice a^{-1} mod N

@@ -4,6 +4,7 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { hexlify } from 'ethers'
 import SVDW_TEST_VECTORS from './vectors/svdw'
+import crypto from 'node:crypto'
 
 describe('Map-to-point', () => {
     let deployer: SignerWithAddress
