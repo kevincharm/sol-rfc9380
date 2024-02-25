@@ -19,8 +19,10 @@ contract SSWU {
     /// @notice Param Z for SSWU over E'
     uint256 private constant Z =
         21888242871839275222246405745257275088696311157297823662689037894645226208570;
+    /// @notice (N - 3) / 4
     uint256 private constant C1 =
         5472060717959818805561601436314318772174077789324455915672259473661306552145;
+    /// @notice sqrt(-Z)
     uint256 private constant C2 =
         9128901577248916245119121441495541088906573436435020319814006418557303224083;
 
@@ -103,6 +105,7 @@ contract SSWU {
         return x % 2;
     }
 
+    /// @notice Optimised sqrt_ratio for curves equivalent to 3 (mod 4)
     function sqrtRatio(
         uint256 u,
         uint256 v
