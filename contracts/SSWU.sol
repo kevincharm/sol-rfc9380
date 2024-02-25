@@ -65,7 +65,7 @@ contract SSWU {
         (p[0], p[1]) = isoMap(p[0], p[1]);
     }
 
-    /// @notice TODO: Nothing should depend on this. Remove!
+    /// @notice TODO: Replace with addition chain
     function modexp(
         bytes memory base,
         bytes memory exponent,
@@ -105,7 +105,7 @@ contract SSWU {
         return x % 2;
     }
 
-    /// @notice Optimised sqrt_ratio for curves equivalent to 3 (mod 4)
+    /// @notice Optimised sqrt_ratio for curve order equivalent to 3 (mod 4)
     function sqrtRatio(
         uint256 u,
         uint256 v
