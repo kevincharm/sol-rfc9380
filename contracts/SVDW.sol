@@ -77,13 +77,7 @@ contract SVDW {
         return addmod(mulmod(mulmod(x, x, N), x, N), B, N);
     }
 
-    function cmov(uint256 x, uint256 y, bool b) private pure returns (uint256) {
-        if (b) {
-            return y;
-        }
-        return x;
-    }
-
+    /// @notice https://datatracker.ietf.org/doc/html/rfc9380#name-the-sgn0-function
     function sgn0(uint256 x) private pure returns (uint256) {
         return x % 2;
     }
