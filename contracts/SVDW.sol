@@ -28,9 +28,13 @@ contract SVDW {
     /// @notice 4 * -g(Z) / (3 * Z^2 + 4 * A) (mod N)
     uint256 private constant C4 =
         0x10216f7ba065e00de81ac1e7808072c9dd2b2385cd7b438469602eb24829a9bd;
+    /// @notice (N - 1) / 2
+    uint256 private constant C5 =
+        0x183227397098d014dc2822db40c0ac2ecbc0b548b438e5469e10460b6c3e7ea3;
 
     error InvalidFieldElement(uint256 x);
     error MapToPointFailed(uint256 noSqrt);
+    error ModExpFailed(uint256 base, uint256 exponent, uint256 modulus);
 
     /// @notice Map field element to E using SvdW
     /// @param u Field element to map
@@ -86,9 +90,7 @@ contract SVDW {
     /// @param u Field element
     /// @return 1 if u is a quadratic residue, -1 if not, or 0 if u = 0 (mod p)
     function legendre(uint256 u) private view returns (int8) {
-        (bool success, bytes memory _x) = modexpLegendre(u);
-        if (!success) revert MapToPointFailed(u);
-        uint256 x = uint256(bytes32(_x));
+        uint256 x = modexpLegendre(u);
         if (x == N - 1) {
             return -1;
         }
@@ -99,11 +101,9 @@ contract SVDW {
     }
 
     /// @notice This is cheaper than an addchain for exponent (N-1)/2
-    function modexpLegendre(
-        uint256 u
-    ) private view returns (bool success, bytes memory output) {
-        output = new bytes(32);
+    function modexpLegendre(uint256 u) private view returns (uint256 output) {
         bytes memory input = new bytes(192);
+        bool success;
         assembly {
             let p := add(input, 32)
             mstore(p, 32) // len(u)
@@ -114,24 +114,22 @@ contract SVDW {
             p := add(p, 32)
             mstore(p, u) // u
             p := add(p, 32)
-            mstore(
-                p,
-                0x183227397098d014dc2822db40c0ac2ecbc0b548b438e5469e10460b6c3e7ea3
-            ) // (N-1)/2
+            mstore(p, C5) // (N-1)/2
             p := add(p, 32)
-            mstore(
-                p,
-                0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
-            ) // N
+            mstore(p, N) // N
 
             success := staticcall(
                 gas(),
                 5,
                 add(input, 32),
                 192,
-                add(output, 32),
+                0x00, // scratch space <- result
                 32
             )
+            output := mload(0x00) // output <- result
+        }
+        if (!success) {
+            revert ModExpFailed(u, C5, N);
         }
     }
 

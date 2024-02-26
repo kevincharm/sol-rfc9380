@@ -28,6 +28,7 @@ contract SSWU {
 
     error InvalidFieldElement(uint256 x);
     error MapToPointFailed(uint256 noSqrt);
+    error ModExpFailed(uint256 base, uint256 exponent, uint256 modulus);
 
     /// @notice Map field element to E using SSWU
     /// @param u Field element to map
@@ -65,32 +66,36 @@ contract SSWU {
         (p[0], p[1]) = isoMap(p[0], p[1]);
     }
 
-    /// @notice TODO: Replace with addition chain
-    function modexp(
-        bytes memory base,
-        bytes memory exponent,
-        bytes memory modulus
-    ) private view returns (bool success, bytes memory output) {
-        bytes memory input = abi.encodePacked(
-            uint256(base.length),
-            uint256(exponent.length),
-            uint256(modulus.length),
-            base,
-            exponent,
-            modulus
-        );
-
-        output = new bytes(modulus.length);
-
+    /// @notice This is cheaper than an addchain for exponent (N-1)/2
+    function modexpC1(uint256 u) private view returns (uint256 output) {
+        bytes memory input = new bytes(192);
+        bool success;
         assembly {
+            let p := add(input, 32)
+            mstore(p, 32) // len(u)
+            p := add(p, 32)
+            mstore(p, 32) // len(exp)
+            p := add(p, 32)
+            mstore(p, 32) // len(mod)
+            p := add(p, 32)
+            mstore(p, u) // u
+            p := add(p, 32)
+            mstore(p, C1) // (N-1)/2
+            p := add(p, 32)
+            mstore(p, N) // N
+
             success := staticcall(
                 gas(),
                 5,
                 add(input, 32),
-                mload(input),
-                add(output, 32),
-                mload(modulus)
+                192,
+                0x00, // scratch space <- result
+                32
             )
+            output := mload(0x00) // output <- result
+        }
+        if (!success) {
+            revert ModExpFailed(u, C1, N);
         }
     }
 
@@ -113,15 +118,7 @@ contract SSWU {
         uint256 tv1 = mulmod(v, v, N);
         uint256 tv2 = mulmod(u, v, N);
         tv1 = mulmod(tv1, tv2, N);
-        // TODO: Exponent ^C1 should be precomputed
-        // This currently takes about ~2450 gas
-        (bool succ, bytes memory y1_bytes) = modexp(
-            abi.encodePacked(tv1),
-            abi.encodePacked(C1),
-            abi.encodePacked(N)
-        );
-        require(succ, "modexp failed");
-        uint256 y1 = uint256(bytes32(y1_bytes));
+        uint256 y1 = modexpC1(tv1);
         y1 = mulmod(y1, tv2, N);
         uint256 y2 = mulmod(y1, C2, N);
         uint256 tv3 = mulmod(y1, y1, N);

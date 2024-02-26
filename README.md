@@ -4,7 +4,7 @@
 
 The original Shallue-van de Woestijne mapping is implemented as per [6.6.1](https://datatracker.ietf.org/doc/html/rfc9380#section-6.6.1).
 
-Mean gas cost of SVDW is ~23k.
+Mean gas cost of SVDW is ~22.6k.
 
 ## Shallue-van de Woestijne-Ulas (SSWU)
 
@@ -15,7 +15,7 @@ $y'^2 = x'^3 + 90879943171917125335686984035305283062335279799348808498658204255
 
 Without the required `isoMap`, `mapToPoint` only consumes ~16k gas. Unfortunately, the 59-isogeny is the lowest-degree curve isogenous to BN254, and so `isoMap` dominates gas usage while also taking up a lot of contract bytecode.
 
-Mean gas cost of SSWU is ~55k.
+Mean gas cost of SSWU is ~54.2k.
 
 ## ModExp
 
